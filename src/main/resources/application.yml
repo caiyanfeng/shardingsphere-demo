@@ -1,0 +1,113 @@
+#配置数据源
+spring:
+  autoconfigure:
+    exclude: com.alibaba.druid.spring.boot.autoconfigure.DruidDataSourceAutoConfigure
+  datasource:
+    druid:
+      # 配置监控统计
+      web-stat-filter:
+        enabled: true
+      stat-view-servlet:
+        enabled: true
+    dynamic:
+      druid: # 全局druid参数，绝大部分值和默认保持一致。(现已支持的参数如下,不清楚含义不要乱设置)
+        # 初始连接数
+        initial-size: 5
+        # 最小连接数
+        min-idle: 15
+        # 最大连接数
+        max-active: 30
+        # 超时时间(以秒数为单位)
+        remove-abandoned-timeout: 180
+        # 获取连接超时时间
+        max-wait: 3000
+        # 连接有效性检测时间
+        time-between-eviction-runs-millis: 60000
+        # 连接在池中最小生存的时间
+        min-evictable-idle-time-millis: 300000
+        # 连接在池中最大生存的时间
+        max-evictable-idle-time-millis: 900000
+        # 指明连接是否被空闲连接回收器(如果有)进行检验.如果检测失败,则连接将被从池中去除
+        test-while-idle: true
+        # 指明是否在从池中取出连接前进行检验,如果检验失败, 则从池中去除连接并尝试取出另一个
+        test-on-borrow: true
+        # 是否在归还到池中前进行检验
+        test-on-return: false
+        # 检测连接是否有效
+        validation-query: select 1
+        # 配置监控统计拦截的filters，去掉后监控界面sql无法统计，'wall'用于防火墙
+        filters: stat,wall,slf4j
+        # 通过connectProperties属性来打开mergeSql功能；慢SQL记录
+        connection-properties: druid.stat.mergeSql\=true;druid.stat.slowSqlMillis\=5000
+      datasource:
+        # 默认数据源master
+        master:
+          url: jdbc:mysql://127.0.0.1:3306/sharding_user?serverTimezone=Asia/Shanghai&characterEncoding=utf8&useSSL=false
+          username: root
+          password: 123456
+          driver-class-name: com.mysql.cj.jdbc.Driver
+        # 多数据源配置
+#        data_1:
+#          url: jdbc:mysql://127.0.0.1:3306/sharding_data1?serverTimezone=Asia/Shanghai&characterEncoding=utf8&useSSL=false&rewriteBatchedStatements=true
+#          username: root
+#          password: 123456
+#          driver-class-name: com.mysql.cj.jdbc.Driver
+#        data_2:
+#          url: jdbc:mysql://127.0.0.1:3306/sharding_data2?serverTimezone=Asia/Shanghai&characterEncoding=utf8&useSSL=false&rewriteBatchedStatements=true
+#          username: root
+#          password: 123456
+#          driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # shardingsphere配置
+  shardingsphere:
+    datasource:
+      names: data1,data2
+      data1:
+        type: com.alibaba.druid.pool.DruidDataSource
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        url: jdbc:mysql://127.0.0.1:3306/sharding_data1?serverTimezone=Asia/Shanghai&characterEncoding=utf8&useSSL=false
+        username: root
+        password: 123456
+      data2:
+        type: com.alibaba.druid.pool.DruidDataSource
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        url: jdbc:mysql://127.0.0.1:3306/sharding_data2?serverTimezone=Asia/Shanghai&characterEncoding=utf8&useSSL=false
+        username: root
+        password: 123456
+    sharding:
+      # 默认分库规则
+      default-database-strategy:
+        inline:
+          sharding-column: type
+          # 根据type字段进行分库，type=1即data1，type=2即data2
+          algorithm-expression: data$->{type}
+      # 标准分片表配置，以下配置只分库不分表
+      tables:
+        t_business:
+          # 由数据源名 + 表名组成
+          actual-data-nodes: data$->{1..2}.t_business
+          # 指定主键，自增主键不用指定，但存在相同主键数据。
+#          key-generator:
+#            column: id
+#            # 主键生成策略，UUID、SNOWFLAKE
+#            type: SNOWFLAKE
+#
+    # 控制台输出SQL
+    props:
+      sql:
+        show: true
+
+#mybatis-plus 配置
+mybatis-plus:
+#  mapper-locations: classpath*:com/sffy/**/repository/xml/*Repository.xml
+  configuration:
+    # 开启自动驼峰命名规则（camel case）映射
+    map-underscore-to-camel-case: true
+    # 这个配置会将执行的sql打印出来，在开发或测试的时候可以用
+  #    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    # 关闭MP3.0自带的banner
+    banner: false
+    db-config:
+      #主键类型  0:"数据库ID自增",1:"该类型为未设置主键类型", 2:"用户输入ID",3:"全局唯一ID (数字类型唯一ID)", 4:"全局唯一ID UUID",5:"字符串全局唯一ID (idWorker 的字符串表示)";
+      id-type: AUTO
